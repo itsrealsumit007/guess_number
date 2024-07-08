@@ -9,6 +9,8 @@ int promptReplay();
 void clearInputBuffer();
 void displayWelcomeMessage();
 void displayInstructions();
+void displayRules();
+void displayDateTime();
 void displayFarewellMessage();
 int chooseDifficulty();
 void loadHighScores(int *easyScore, int *mediumScore, int *hardScore);
@@ -21,7 +23,9 @@ int main() {
     loadHighScores(&easyScore, &mediumScore, &hardScore);
 
     displayWelcomeMessage();
+    displayDateTime();
     displayInstructions();
+    displayRules();
     displayHighScores(easyScore, mediumScore, hardScore);
 
     do {
@@ -52,8 +56,11 @@ int main() {
 int playGame(int maxRange, int maxAttempts) {
     int numberToGuess = rand() % maxRange + 1;
     int userGuess = 0, guessCount = 0, isValidInput;
+    time_t startTime, endTime;
 
     printf("I have selected a number between 1 and %d. Can you guess it?\n", maxRange);
+
+    time(&startTime);
 
     while (userGuess != numberToGuess && guessCount < maxAttempts) {
         printf("Enter your guess: ");
@@ -70,7 +77,9 @@ int playGame(int maxRange, int maxAttempts) {
         if (userGuess < numberToGuess) printf("Too low! Try again.\n");
         else if (userGuess > numberToGuess) printf("Too high! Try again.\n");
         else {
-            printf("Congratulations! You guessed the number in %d attempts.\n", guessCount);
+            time(&endTime);
+            double timeTaken = difftime(endTime, startTime);
+            printf("Congratulations! You guessed the number in %d attempts and %.2f seconds.\n", guessCount, timeTaken);
             return guessCount;
         }
 
@@ -105,6 +114,12 @@ void displayWelcomeMessage() {
     printf("*****************************\n");
 }
 
+void displayDateTime() {
+    time_t currentTime;
+    time(&currentTime);
+    printf("Current Date and Time: %s", ctime(&currentTime));
+}
+
 void displayInstructions() {
     printf("\nInstructions:\n");
     printf("1. I will think of a number within a range based on the difficulty level.\n");
@@ -112,6 +127,14 @@ void displayInstructions() {
     printf("3. After each guess, I will tell you if your guess is too high, too low, or correct.\n");
     printf("4. Keep guessing until you find the correct number or run out of attempts.\n");
     printf("5. You can choose to play again after each game.\n\n");
+}
+
+void displayRules() {
+    printf("Game Rules:\n");
+    printf("1. You have a limited number of attempts based on the difficulty level.\n");
+    printf("2. Guess the correct number within the specified range.\n");
+    printf("3. Your best scores will be recorded in the high score list.\n");
+    printf("4. Have fun!\n\n");
 }
 
 void displayFarewellMessage() {
