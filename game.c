@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
 #define HIGH_SCORE_FILE "highscores.txt"
+#define LEADERBOARD_SIZE 3
 
-void playGame(int maxRange, int maxAttempts);
+void playGame(int maxRange, int maxAttempts, int *leaderboard, int *totalGames, int *totalGuesses);
 int promptReplay();
 void clearInputBuffer();
 void displayWelcomeMessage();
@@ -13,20 +15,28 @@ void displayRules();
 void displayDateTime();
 void displayFarewellMessage();
 int chooseDifficulty();
-void loadHighScores(int *easyScore, int *mediumScore, int *hardScore);
-void saveHighScores(int easyScore, int mediumScore, int hardScore);
-void displayHighScores(int easyScore, int mediumScore, int hardScore);
+void loadHighScores(int leaderboards[][LEADERBOARD_SIZE]);
+void saveHighScores(int leaderboards[][LEADERBOARD_SIZE]);
+void displayHighScores(int leaderboards[][LEADERBOARD_SIZE]);
+void updateLeaderboard(int *leaderboard, int score);
+void displayPerformanceSummary(int totalGames, int totalGuesses);
 
 int main() {
     srand(time(0));
-    int easyScore = -1, mediumScore = -1, hardScore = -1;
-    loadHighScores(&easyScore, &mediumScore, &hardScore);
+    int leaderboards[3][LEADERBOARD_SIZE];
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < LEADERBOARD_SIZE; j++)
+            leaderboards[i][j] = -1;
+    loadHighScores(leaderboards);
 
     displayWelcomeMessage();
     displayDateTime();
     displayInstructions();
     displayRules();
-    displayHighScores(easyScore, mediumScore, hardScore);
+    displayHighScores(leaderboards);
+
+    int totalGames = 0;
+    int totalGuesses = 0;
 
     do {
         int difficulty = chooseDifficulty();
@@ -39,21 +49,16 @@ int main() {
             default: maxRange = 100; maxAttempts = 7;
         }
 
-        int attempts = playGame(maxRange, maxAttempts);
-
-        if (attempts != -1) {
-            if (difficulty == 1 && (easyScore == -1 || attempts < easyScore)) easyScore = attempts;
-            else if (difficulty == 2 && (mediumScore == -1 || attempts < mediumScore)) mediumScore = attempts;
-            else if (difficulty == 3 && (hardScore == -1 || attempts < hardScore)) hardScore = attempts;
-            saveHighScores(easyScore, mediumScore, hardScore);
-        }
+        playGame(maxRange, maxAttempts, leaderboards[difficulty - 1], &totalGames, &totalGuesses);
+        saveHighScores(leaderboards);
     } while (promptReplay());
 
+    displayPerformanceSummary(totalGames, totalGuesses);
     displayFarewellMessage();
     return 0;
 }
 
-int playGame(int maxRange, int maxAttempts) {
+void playGame(int maxRange, int maxAttempts, int *leaderboard, int *totalGames, int *totalGuesses) {
     int numberToGuess = rand() % maxRange + 1;
     int userGuess = 0, guessCount = 0, isValidInput;
     time_t startTime, endTime;
@@ -80,13 +85,27 @@ int playGame(int maxRange, int maxAttempts) {
             time(&endTime);
             double timeTaken = difftime(endTime, startTime);
             printf("Congratulations! You guessed the number in %d attempts and %.2f seconds.\n", guessCount, timeTaken);
-            return guessCount;
+            updateLeaderboard(leaderboard, guessCount);
+            break;
         }
 
         if (guessCount == maxAttempts && userGuess != numberToGuess)
             printf("Sorry, you've reached the maximum number of attempts. The correct number was %d.\n", numberToGuess);
     }
-    return -1;
+
+    (*totalGames)++;
+    (*totalGuesses) += guessCount;
+}
+
+void updateLeaderboard(int *leaderboard, int score) {
+    for (int i = 0; i < LEADERBOARD_SIZE; i++) {
+        if (leaderboard[i] == -1 || score < leaderboard[i]) {
+            for (int j = LEADERBOARD_SIZE - 1; j > i; j--)
+                leaderboard[j] = leaderboard[j - 1];
+            leaderboard[i] = score;
+            break;
+        }
+    }
 }
 
 int promptReplay() {
@@ -160,25 +179,45 @@ int chooseDifficulty() {
     return difficulty;
 }
 
-void loadHighScores(int *easyScore, int *mediumScore, int *hardScore) {
+void loadHighScores(int leaderboards[][LEADERBOARD_SIZE]) {
     FILE *file = fopen(HIGH_SCORE_FILE, "r");
     if (file != NULL) {
-        fscanf(file, "%d %d %d", easyScore, mediumScore, hardScore);
+        for (int i = 0; i < 3; i++)
+            for (int j = 0; j < LEADERBOARD_SIZE; j++)
+                fscanf(file, "%d", &leaderboards[i][j]);
         fclose(file);
     }
 }
 
-void saveHighScores(int easyScore, int mediumScore, int hardScore) {
+void saveHighScores(int leaderboards[][LEADERBOARD_SIZE]) {
     FILE *file = fopen(HIGH_SCORE_FILE, "w");
     if (file != NULL) {
-        fprintf(file, "%d %d %d", easyScore, mediumScore, hardScore);
+        for (int i = 0; i < 3; i++)
+            for (int j = 0; j < LEADERBOARD_SIZE; j++)
+                fprintf(file, "%d ", leaderboards[i][j]);
         fclose(file);
     }
 }
 
-void displayHighScores(int easyScore, int mediumScore, int hardScore) {
+void displayHighScores(int leaderboards[][LEADERBOARD_SIZE]) {
+    const char *levels[] = {"Easy", "Medium", "Hard"};
     printf("\nHigh Scores:\n");
-    printf("Easy: %d attempts\n", (easyScore == -1) ? 0 : easyScore);
-    printf("Medium: %d attempts\n", (mediumScore == -1) ? 0 : mediumScore);
-    printf("Hard: %d attempts\n\n", (hardScore == -1) ? 0 : hardScore);
+    for (int i = 0; i < 3; i++) {
+        printf("%s: ", levels[i]);
+        for (int j = 0; j < LEADERBOARD_SIZE; j++) {
+            if (leaderboards[i][j] != -1)
+                printf("%d attempts ", leaderboards[i][j]);
+            else
+                printf("- ");
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void displayPerformanceSummary(int totalGames, int totalGuesses) {
+    printf("\nPerformance Summary:\n");
+    printf("Total Games Played: %d\n", totalGames);
+    printf("Total Guesses Made: %d\n", totalGuesses);
+    printf("Average Guesses per Game: %.2f\n\n", (double)totalGuesses / totalGames);
 }
