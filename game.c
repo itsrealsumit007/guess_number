@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define HIGH_SCORE_FILE "highscores.txt"
+
 void playGame(int maxRange, int maxAttempts);
 int promptReplay();
 void clearInputBuffer();
@@ -9,46 +11,47 @@ void displayWelcomeMessage();
 void displayInstructions();
 void displayFarewellMessage();
 int chooseDifficulty();
+void loadHighScores(int *easyScore, int *mediumScore, int *hardScore);
+void saveHighScores(int easyScore, int mediumScore, int hardScore);
+void displayHighScores(int easyScore, int mediumScore, int hardScore);
 
 int main() {
     srand(time(0));
+    int easyScore = -1, mediumScore = -1, hardScore = -1;
+    loadHighScores(&easyScore, &mediumScore, &hardScore);
+
     displayWelcomeMessage();
     displayInstructions();
+    displayHighScores(easyScore, mediumScore, hardScore);
 
     do {
         int difficulty = chooseDifficulty();
         int maxRange, maxAttempts;
 
         switch (difficulty) {
-            case 1: // Easy
-                maxRange = 50;
-                maxAttempts = 10;
-                break;
-            case 2: // Medium
-                maxRange = 100;
-                maxAttempts = 7;
-                break;
-            case 3: // Hard
-                maxRange = 200;
-                maxAttempts = 5;
-                break;
-            default:
-                maxRange = 100;
-                maxAttempts = 7;
+            case 1: maxRange = 50; maxAttempts = 10; break;
+            case 2: maxRange = 100; maxAttempts = 7; break;
+            case 3: maxRange = 200; maxAttempts = 5; break;
+            default: maxRange = 100; maxAttempts = 7;
         }
 
-        playGame(maxRange, maxAttempts);
+        int attempts = playGame(maxRange, maxAttempts);
+
+        if (attempts != -1) {
+            if (difficulty == 1 && (easyScore == -1 || attempts < easyScore)) easyScore = attempts;
+            else if (difficulty == 2 && (mediumScore == -1 || attempts < mediumScore)) mediumScore = attempts;
+            else if (difficulty == 3 && (hardScore == -1 || attempts < hardScore)) hardScore = attempts;
+            saveHighScores(easyScore, mediumScore, hardScore);
+        }
     } while (promptReplay());
 
     displayFarewellMessage();
     return 0;
 }
 
-void playGame(int maxRange, int maxAttempts) {
+int playGame(int maxRange, int maxAttempts) {
     int numberToGuess = rand() % maxRange + 1;
-    int userGuess = 0;
-    int guessCount = 0;
-    int isValidInput;
+    int userGuess = 0, guessCount = 0, isValidInput;
 
     printf("I have selected a number between 1 and %d. Can you guess it?\n", maxRange);
 
@@ -64,18 +67,17 @@ void playGame(int maxRange, int maxAttempts) {
 
         guessCount++;
 
-        if (userGuess < numberToGuess) {
-            printf("Too low! Try again.\n");
-        } else if (userGuess > numberToGuess) {
-            printf("Too high! Try again.\n");
-        } else {
+        if (userGuess < numberToGuess) printf("Too low! Try again.\n");
+        else if (userGuess > numberToGuess) printf("Too high! Try again.\n");
+        else {
             printf("Congratulations! You guessed the number in %d attempts.\n", guessCount);
+            return guessCount;
         }
 
-        if (guessCount == maxAttempts && userGuess != numberToGuess) {
+        if (guessCount == maxAttempts && userGuess != numberToGuess)
             printf("Sorry, you've reached the maximum number of attempts. The correct number was %d.\n", numberToGuess);
-        }
     }
+    return -1;
 }
 
 int promptReplay() {
@@ -133,4 +135,27 @@ int chooseDifficulty() {
     }
 
     return difficulty;
+}
+
+void loadHighScores(int *easyScore, int *mediumScore, int *hardScore) {
+    FILE *file = fopen(HIGH_SCORE_FILE, "r");
+    if (file != NULL) {
+        fscanf(file, "%d %d %d", easyScore, mediumScore, hardScore);
+        fclose(file);
+    }
+}
+
+void saveHighScores(int easyScore, int mediumScore, int hardScore) {
+    FILE *file = fopen(HIGH_SCORE_FILE, "w");
+    if (file != NULL) {
+        fprintf(file, "%d %d %d", easyScore, mediumScore, hardScore);
+        fclose(file);
+    }
+}
+
+void displayHighScores(int easyScore, int mediumScore, int hardScore) {
+    printf("\nHigh Scores:\n");
+    printf("Easy: %d attempts\n", (easyScore == -1) ? 0 : easyScore);
+    printf("Medium: %d attempts\n", (mediumScore == -1) ? 0 : mediumScore);
+    printf("Hard: %d attempts\n\n", (hardScore == -1) ? 0 : hardScore);
 }
