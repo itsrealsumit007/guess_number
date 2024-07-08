@@ -4,16 +4,21 @@
 
 void playGame();
 int promptReplay();
+void clearInputBuffer();
+void displayWelcomeMessage();
+void displayInstructions();
+void displayFarewellMessage();
 
 int main() {
     srand(time(0));
-    printf("Welcome to Guess the Number!\n");
+    displayWelcomeMessage();
+    displayInstructions();
 
     do {
         playGame();
     } while (promptReplay());
 
-    printf("Thanks for playing!\n");
+    displayFarewellMessage();
     return 0;
 }
 
@@ -31,7 +36,7 @@ void playGame() {
 
         if (!isValidInput) {
             printf("Invalid input! Please enter a number.\n");
-            while (getchar() != '\n');
+            clearInputBuffer();
             continue;
         }
 
@@ -51,12 +56,36 @@ int promptReplay() {
     char response;
     printf("Do you want to play again? (y/n): ");
     scanf(" %c", &response);
+    clearInputBuffer();
 
-    while (getchar() != '\n');
-
-    if (response == 'y' || response == 'Y') {
-        return 1;
-    } else {
-        return 0;
+    while (response != 'y' && response != 'Y' && response != 'n' && response != 'N') {
+        printf("Invalid response. Please enter 'y' or 'n': ");
+        scanf(" %c", &response);
+        clearInputBuffer();
     }
+
+    return (response == 'y' || response == 'Y');
+}
+
+void clearInputBuffer() {
+    while (getchar() != '\n');
+}
+
+void displayWelcomeMessage() {
+    printf("*****************************\n");
+    printf("* Welcome to Guess the Number! *\n");
+    printf("*****************************\n");
+}
+
+void displayInstructions() {
+    printf("\nInstructions:\n");
+    printf("1. I will think of a number between 1 and 100.\n");
+    printf("2. Your task is to guess the number.\n");
+    printf("3. After each guess, I will tell you if your guess is too high, too low, or correct.\n");
+    printf("4. Keep guessing until you find the correct number.\n");
+    printf("5. You can choose to play again after each game.\n\n");
+}
+
+void displayFarewellMessage() {
+    printf("Thanks for playing Guess the Number! Goodbye!\n");
 }
